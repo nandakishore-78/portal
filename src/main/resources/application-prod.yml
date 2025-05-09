@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: course-portal
+  datasource:
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true
+
+jwt:
+  secret: ${JWT_SECRET:your-secret-key-here-must-be-at-least-32-characters-long}
+  expiration: 86400000 # 24 hours in milliseconds
+
+finance:
+  service:
+    url: http://finance-service:8081/api
+
+library:
+  service:
+    url: http://library-service:8082/api 

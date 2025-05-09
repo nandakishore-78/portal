@@ -1,0 +1,17 @@
+.git
+.gitignore
+target/
+.idea/
+*.iml
+*.iws
+*.ipr
+.settings/
+.project
+.classpath
+.mvn/
+mvnw
+mvnw.cmd
+README.md
+Dockerfile
+docker-compose.yml
+init-multiple-dbs.sh 
