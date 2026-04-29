@@ -1,125 +1,108 @@
-# Course Portal Microservices Application
+# Course Portal
 
-This is a microservices-based web application that provides online course management functionality. The application consists of three main microservices:
+A JWT-secured REST API microservice for managing student course enrolments, user profiles, and graduation eligibility. Built as part of the Software Engineering for Service Computing module at Leeds Beckett University.
 
-1. Course Portal (Main Service)
-2. Finance Service
-3. Library Service
+Unlike a traditional monolithic student system, this service acts purely as a stateless API gateway — it handles authentication and orchestrates calls to the Finance and Library microservices without owning any business logic that lives downstream. It runs on H2 in development and PostgreSQL in production, and supports Eureka service discovery for containerised deployments.
 
 ## Features
 
-- User Registration and Authentication
-- Course Management
-- Course Enrollment
-- Student Profile Management
-- Graduation Eligibility Checking
-- Integration with Finance and Library Services
+- User registration and JWT-based login
+- Role-based access control (student / admin)
+- Course listing and enrolment
+- View enrolled courses and personal profile
+- Profile updates (name, contact info)
+- Graduation eligibility check — calls Finance service to confirm no outstanding invoices
+- Eureka service registry integration for dynamic service discovery
 
-## Prerequisites
+## Tech stack
 
-- Java 17 or higher
+- Java 17
+- Spring Boot 3.2
 - Maven
-- Spring Boot 3.2.3
-- Docker and Docker Compose
-- PostgreSQL (for production)
+- PostgreSQL (production) / H2 (development)
+- Spring Security + JWT
+- Docker / Docker Compose
+- Spring Cloud Eureka Client
+- RestTemplate (inter-service calls)
 
-## Project Structure
+## Running with Docker Compose
 
-```
-src/main/java/org/example/portal/
-├── config/           # Configuration classes
-├── controller/       # REST controllers
-├── dto/             # Data Transfer Objects
-├── model/           # Entity classes
-├── repository/      # JPA repositories
-├── security/        # Security configuration
-└── service/         # Business logic and external service integration
+```bash
+docker-compose up
 ```
 
-## API Endpoints
+Starts the portal on port `8080` alongside a PostgreSQL instance. The Finance and Library services need to be running separately for integration features (enrolment invoicing, graduation check) to work.
+
+## Running locally (development)
+
+No database setup needed — H2 runs in-memory.
+
+```bash
+mvn spring-boot:run
+```
+
+The H2 console is available at `http://localhost:8080/h2-console` (JDBC URL: `jdbc:h2:mem:portaldb`).
+
+## Configuration
+
+For production, set the following environment variables or update `application-prod.yml`:
+
+```
+SPRING_DATASOURCE_URL=jdbc:postgresql://<host>:5432/<db>
+SPRING_DATASOURCE_USERNAME=<user>
+SPRING_DATASOURCE_PASSWORD=<password>
+JWT_SECRET=<secret-key-min-32-characters>
+EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://<eureka-host>:8761/eureka/
+```
+
+The development profile (`application.yml`) uses H2 and a placeholder JWT secret — do not use these in production.
+
+## API reference
 
 ### Authentication
-- POST `/api/auth/signup` - Register a new user
-- POST `/api/auth/signin` - Login and get JWT token
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/signup` | Register a new user |
+| POST | `/api/auth/signin` | Login — returns JWT token |
 
 ### Courses
-- GET `/api/courses` - Get all courses
-- GET `/api/courses/{id}` - Get course by ID
-- POST `/api/courses/{courseId}/enroll` - Enroll in a course
-- GET `/api/courses/enrolled` - Get enrolled courses
 
-### User Profile
-- GET `/api/users/profile` - Get user profile
-- PUT `/api/users/profile` - Update user profile
-- GET `/api/users/graduation-eligibility` - Check graduation eligibility
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/courses` | List all available courses (public) |
+| GET | `/api/courses/{id}` | Get course details |
+| POST | `/api/courses/{courseId}/enroll` | Enrol in a course (authenticated) |
+| GET | `/api/courses/enrolled` | View your enrolled courses |
 
-## Setup and Running
+### User profile
 
-### Local Development
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/users/profile` | Get your profile |
+| PUT | `/api/users/profile` | Update your profile |
+| GET | `/api/users/graduation-eligibility` | Check graduation eligibility |
 
-1. Clone the repository
-2. Configure the application.yml file with your settings
-3. Run the application:
-   ```bash
-   mvn spring-boot:run
-   ```
+All endpoints except `/api/auth/**` and `GET /api/courses` require a valid JWT in the `Authorization: Bearer <token>` header.
 
-### Docker Setup
+## Architecture
 
-1. Make sure Docker and Docker Compose are installed on your system
-2. Clone the repository
-3. Make the initialization script executable:
-   ```bash
-   chmod +x init-multiple-dbs.sh
-   ```
-4. Build and start the containers:
-   ```bash
-   docker-compose up -d
-   ```
-
-The application will be available at:
-- Course Portal: http://localhost:8080
-- Eureka Server: http://localhost:8761
-- Finance Service: http://localhost:8081
-- Library Service: http://localhost:8082
-
-To stop the containers:
-```bash
-docker-compose down
+```
+Client  ──►  Course Portal (this)
+                 ├──►  Finance Service  (invoice creation on enrolment, balance check for graduation)
+                 └──►  Library Service  (student account registration)
 ```
 
-To view logs:
-```bash
-docker-compose logs -f
-```
+The portal calls the Finance service when:
+- A student enrols in a course — an invoice is raised for the enrolment fee
+- A student checks graduation eligibility — their account balance is checked
 
-## Microservices Integration
+Eureka is used for service discovery in containerised deployments, so Finance and Library service URLs are resolved dynamically rather than hardcoded.
 
-The application integrates with two other microservices:
+## Security design
 
-### Finance Service
-- Handles payment processing
-- Manages invoices
-- Checks for outstanding payments
+JWT tokens are generated on signin and validated on every protected request via `JwtAuthenticationFilter`. Tokens include the user's role and expire after 24 hours (`86400000ms`). The secret key is injected at runtime via environment variable — nothing sensitive lives in the codebase.
 
-### Library Service
-- Manages course materials
-- Tracks book loans
-- Checks for overdue books
+## Module
 
-## Security
-
-The application uses JWT (JSON Web Tokens) for authentication. All endpoints except `/api/auth/**` and `/api/courses` require authentication.
-
-## Database
-
-- Development: H2 database (in-memory)
-- Production: PostgreSQL
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a new Pull Request 
+Software Engineering for Service Computing — Leeds Beckett University
